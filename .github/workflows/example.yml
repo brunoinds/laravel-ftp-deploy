@@ -1,0 +1,65 @@
+# Example workflow for using Laravel FTP Deploy Action
+# Copy this file to your project's .github/workflows/ directory
+
+name: Deploy to FTP Server
+
+on:
+  push:
+    branches: [ main ]
+
+  # Allow manual deployment
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (preview changes only)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      # Optional: Build assets if needed
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Install Node dependencies
+        run: npm ci
+
+      - name: 🏗️ Build production assets
+        run: npm run build
+
+      # Deploy using this action
+      - name: 🗂️ Sync files to FTP server
+        uses: username/laravel-ftp-deploy@main  # Replace with your actual repo
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          remote-tree-url: ${{ secrets.DEPLOYER_URL }}
+          timeout: 300
+          max-retries: 4
+          dry-run: ${{ github.event.inputs.dry_run || false }}
+          exclude: |
+            .env
+            .git/**
+            node_modules/**
+            storage/app/**
+            storage/logs/**
+            storage/keys/**
+            storage/framework/cache/**
+            storage/framework/sessions/**
+            storage/framework/views/**
+            public/storage/**
+            database/database.sqlite
+            resources/**
+            *.log
+            .DS_Store

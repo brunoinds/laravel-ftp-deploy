@@ -1,0 +1,72 @@
+name: 'Laravel FTP Deploy'
+description: 'Intelligent FTP synchronization with file hashing, exclusion patterns, and retry logic for Laravel applications'
+author: 'Bruno Freire'
+
+branding:
+  icon: 'upload-cloud'
+  color: 'blue'
+
+inputs:
+  server:
+    description: 'FTP server hostname or IP address'
+    required: true
+  username:
+    description: 'FTP username'
+    required: true
+  password:
+    description: 'FTP password'
+    required: true
+  timeout:
+    description: 'FTP timeout in seconds'
+    required: false
+    default: '60'
+  max-retries:
+    description: 'Maximum retry attempts for FTP operations'
+    required: false
+    default: '4'
+  local-dir:
+    description: 'Local directory path to sync (defaults to GitHub workspace)'
+    required: false
+    default: '.'
+  remote-tree-url:
+    description: 'URL to the remote tree generation script (ftp-remote-tree.php)'
+    required: true
+  exclude:
+    description: 'Paths to exclude from sync (one per line, supports wildcards)'
+    required: false
+    default: ''
+  dry-run:
+    description: 'Show what would be done without actually doing it'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 🔧 Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: ftp, curl, json
+        coverage: none
+
+    - name: 📦 Install Dependencies
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        composer install --no-dev --optimize-autoloader --no-interaction --quiet
+
+    - name: 🚀 Execute FTP Deploy
+      shell: bash
+      env:
+        FTP_SERVER: ${{ inputs.server }}
+        FTP_USERNAME: ${{ inputs.username }}
+        FTP_PASSWORD: ${{ inputs.password }}
+        FTP_TIMEOUT: ${{ inputs.timeout }}
+        FTP_MAX_RETRIES: ${{ inputs.max-retries }}
+        LOCAL_DIR: ${{ inputs.local-dir }}
+        REMOTE_TREE_URL: ${{ inputs.remote-tree-url }}
+        EXCLUDE_PATHS: ${{ inputs.exclude }}
+        DRY_RUN: ${{ inputs.dry-run }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: ${{ github.action_path }}/entrypoint.sh
